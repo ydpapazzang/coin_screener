@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Crypto Screener - Strategies</title>
+    <style>
+        body { background-color: #131722; color: #d1d4dc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 40px; }
+        h1 { color: #ffffff; font-size: 28px; margin-bottom: 30px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .strategy-item { background-color: #1e222d; border: 1px solid #363a45; padding: 16px 20px; margin: 12px 0; display: flex; justify-content: space-between; align-items: center; border-radius: 8px; transition: border-color 0.2s; }
+        .strategy-item:hover { border-color: #2962ff; }
+        .strategy-name { font-size: 18px; font-weight: 600; color: #d1d4dc; text-decoration: none; }
+        .strategy-name:hover { color: #2962ff; }
+        button { background-color: #2962ff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; }
+        button:hover { background-color: #1e53e5; }
+        .btn-delete { background-color: transparent; color: #f23645; border: 1px solid #f23645; margin-left: 10px; }
+        .btn-delete:hover { background-color: #f23645; color: white; }
+        input[type="text"] { background-color: #1e222d; border: 1px solid #363a45; color: white; padding: 10px; border-radius: 4px; width: 250px; margin-right: 10px; }
+        .del-mode { display: none; }
+        #loading-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%; background: rgba(19, 23, 34, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            color: white;
+            font-size: 24px;
+        }
+    </style>
+    <script>
+        function toggleDeleteMode() {
+            document.querySelectorAll('.del-chk').forEach(el => el.style.display = 'inline');
+            document.getElementById('del-btn').style.display = 'inline';
+        }
+        function showLoading() {
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+    </script>
+</head>
+<body>
+    <div id="loading-overlay">검색 중입니다...</div>
+
+    <div class="container">
+        <h1>전략 리스트</h1>
+        
+        <div style="margin-bottom: 40px; display: flex; justify-content: space-between; align-items: center;">
+            <form action="{% url 'strategy_create' %}" method="post" style="display: flex;">
+                {% csrf_token %}
+                <input type="text" name="name" placeholder="새 전략 이름 입력" required>
+                <button type="submit">전략 추가</button>
+            </form>
+            <button class="btn-delete" onclick="toggleDeleteMode()">삭제 모드</button>
+        </div>
+
+        <form action="{% url 'strategy_delete' %}" method="post">
+            {% csrf_token %}
+            <button type="submit" id="del-btn" class="btn-delete" style="display:none; margin-bottom: 20px;">선택한 전략 삭제</button>
+            
+            <div class="list">
+                {% for strategy in strategies %}
+                <div class="strategy-item">
+                    <div>
+                        <input type="checkbox" name="strategy_ids" value="{{ strategy.id }}" class="del-chk" style="display:none; margin-right: 15px;">
+                        <a href="{% url 'strategy_detail' strategy.id %}" class="strategy-name">{{ strategy.name }}</a>
+                    </div>
+                    <a href="{% url 'coin_search' strategy.id %}" onclick="showLoading()"><button type="button">검색 실행</button></a>
+                </div>
+                {% endfor %}
+            </div>
+        </form>
+    </div>
+</body>
+</html>

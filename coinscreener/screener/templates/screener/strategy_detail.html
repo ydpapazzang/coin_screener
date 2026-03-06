@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ strategy.name }} - Edit Strategy</title>
+    <style>
+        body { background-color: #131722; color: #d1d4dc; font-family: -apple-system, sans-serif; margin: 0; padding: 40px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { color: #ffffff; margin-bottom: 10px; }
+        .back-link { color: #2962ff; text-decoration: none; font-size: 14px; display: block; margin-bottom: 30px; }
+        .card { background-color: #1e222d; border: 1px solid #363a45; padding: 24px; border-radius: 8px; margin-bottom: 20px; }
+        .condition-box { background-color: #2a2e39; border-left: 4px solid #2962ff; padding: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border-radius: 4px; }
+        .condition-text { font-family: "Courier New", monospace; font-size: 15px; }
+        .btn-add { background-color: #2962ff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: 600; }
+        .btn-del { color: #f23645; text-decoration: none; font-size: 13px; font-weight: 600; }
+        select, input { background-color: #131722; border: 1px solid #363a45; color: white; padding: 8px; border-radius: 4px; margin: 5px; }
+        label { font-size: 14px; color: #868993; margin-left: 10px; }
+        .tab-container { display: flex; margin-bottom: 20px; border-bottom: 1px solid #363a45; }
+        .tab { padding: 10px 20px; cursor: pointer; color: #868993; }
+        .tab.active { color: #2962ff; border-bottom: 2px solid #2962ff; font-weight: bold; }
+        .cond-form { display: none; }
+        .cond-form.active { display: block; }
+        .alert-msg { background-color: #f23645; color: white; padding: 10px; border-radius: 4px; margin-bottom: 20px; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{% url 'strategy_list' %}" class="back-link">← 전략 리스트로 돌아가기</a>
+        <h1>{{ strategy.name }}</h1>
+
+        <!-- 서버 에러 메시지 표시 -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert-msg">
+                    ⚠️ {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <p style="color: #868993; margin-bottom: 30px;">조건들을 설정하여 나만의 스크리닝 전략을 만드세요.</p>
+
+        <div class="card">
+            <h3 style="margin-top: 0;">현재 설정된 조건 (AND)</h3>
+            {% for cond in conditions %}
+            <div class="condition-box">
+                <span class="condition-text">
+                    [{{ cond.get_timeframe_display }}] {{ cond.offset }}봉전: 
+                    {{ cond.get_left_indicator_display }}({{ cond.left_param }}) 
+                    {{ cond.get_operator_display }} 
+                    {{ cond.get_right_indicator_display }}({{ cond.right_param }})
+                </span>
+                <a href="{% url 'condition_delete' strategy.id cond.id %}" class="btn-del" onclick="return confirm('삭제하시겠습니까?')">삭제</a>
+            </div>
+            {% empty %}
+            <p style="color: #5d606b;">추가된 조건이 없습니다.</p>
+            {% endfor %}
+        </div>
+
+        <div class="card">
+            <h3 style="margin-top: 0;">지표 선택</h3>
+            <div class="tab-container">
+                <div class="tab active" onclick="switchTab('MA')">이동평균(MA)</div>
+                <div class="tab" onclick="switchTab('RSI')">RSI</div>
+            </div>
+
+            <!-- MA 설정 폼 -->
+            <form action="{% url 'condition_add' strategy.id %}" method="post" id="form-MA" class="cond-form active" onsubmit="return validateMA()">
+                {% csrf_token %}
+                <input type="hidden" name="cond_type" value="MA">
+                
+                <label>1) 캔들 단위</label>
+                <select name="timeframe">
+                    <option value="minute60">1시간봉</option>
+                    <option value="minute240">4시간봉</option>
+                    <option value="day" selected>일봉</option>
+                    <option value="week">주봉</option>
+                    <option value="month">월봉</option>
+                </select>
+
+                <label>2) 기간 선택</label>
+                <input type="number" name="offset" value="0" style="width:60px;" min="0"> 봉 전
+
+                <div style="margin-top:15px;">
+                    <label>3) 이동평균가격A</label>
+                    <select name="ma_price_a_type" onchange="toggleMaInput(this)">
+                        <option value="MA">N (기간입력)</option>
+                        <option value="CLOSE">종가</option>
+                    </select>
+                    <input type="number" name="ma_price_a_val" id="ma_a_val" value="5" style="width:60px;" min="1">
+
+                    <label style="margin-left:20px;">이동평균가격B</label>
+                    <input type="number" name="ma_price_b_val" value="20" style="width:60px;" min="1">
+                </div>
+
+                <div style="margin-top:15px;">
+                    <label>4) 비교 조건</label>
+                    <select name="operator" style="color: #2962ff; font-weight: bold;">
+                        <option value="gte">이상 (>=)</option>
+                        <option value="lte">이하 (<=)</option>
+                    </select>
+                    <button type="submit" class="btn-add" style="margin-left:20px;">+ MA 조건 추가</button>
+                </div>
+            </form>
+
+            <!-- RSI 설정 폼 -->
+            <form action="{% url 'condition_add' strategy.id %}" method="post" id="form-RSI" class="cond-form" onsubmit="return validateRSI()">
+                {% csrf_token %}
+                <input type="hidden" name="cond_type" value="RSI">
+
+                <label>1) 캔들 단위</label>
+                <select name="timeframe">
+                    <option value="minute60">1시간봉</option>
+                    <option value="minute240">4시간봉</option>
+                    <option value="day" selected>일봉</option>
+                    <option value="week">주봉</option>
+                    <option value="month">월봉</option>
+                </select>
+
+                <label>2) 기간 선택</label>
+                <input type="number" name="offset" value="0" style="width:60px;" min="0"> 봉 전
+
+                <div style="margin-top:15px;">
+                    <label>3) RSI 기간 (기본 14)</label>
+                    <input type="number" name="rsi_period" value="14" style="width:60px;" min="1">
+                </div>
+
+                <div style="margin-top:15px;">
+                    <label>4) RSI 기준값 (0~100)</label>
+                    <input type="number" name="rsi_threshold" value="30" style="width:60px;" max="100" min="0">
+                    <select name="operator" style="color: #2962ff; font-weight: bold;">
+                        <option value="gte">이상 (>=)</option>
+                        <option value="lte">이하 (<=)</option>
+                    </select>
+                    <button type="submit" class="btn-add" style="margin-left:20px;">+ RSI 조건 추가</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(type) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.cond-form').forEach(f => f.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById('form-' + type).classList.add('active');
+        }
+
+        function toggleMaInput(select) {
+            const input = document.getElementById('ma_a_val');
+            if (select.value === 'CLOSE') {
+                input.style.display = 'none';
+            } else {
+                input.style.display = 'inline-block';
+            }
+        }
+
+        function validateMA() {
+            const form = document.getElementById('form-MA');
+            const offset = parseInt(form.offset.value);
+            const aType = form.ma_price_a_type.value;
+            const aVal = parseInt(form.ma_price_a_val.value);
+            const bVal = parseInt(form.ma_price_b_val.value);
+
+            if (offset < 0) { alert("n봉 전은 0 이상의 숫자여야 합니다."); return false; }
+            if (aType === 'MA' && aVal < 1) { alert("이동평균가격A 기간은 1 이상의 숫자여야 합니다."); return false; }
+            if (bVal < 1) { alert("이동평균가격B 기간은 1 이상의 숫자여야 합니다."); return false; }
+            return true;
+        }
+
+        function validateRSI() {
+            const form = document.getElementById('form-RSI');
+            const offset = parseInt(form.offset.value);
+            const period = parseInt(form.rsi_period.value);
+            const threshold = parseInt(form.rsi_threshold.value);
+
+            if (offset < 0) { alert("n봉 전은 0 이상의 숫자여야 합니다."); return false; }
+            if (period < 1) { alert("RSI 기간은 1 이상의 숫자여야 합니다."); return false; }
+            if (threshold < 0 || threshold > 100) { alert("RSI 기준값은 0에서 100 사이여야 합니다."); return false; }
+            return true;
+        }
+    </script>
+</body>
+</html>

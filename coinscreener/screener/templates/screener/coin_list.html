@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Screener Results</title>
+    <style>
+        body { background-color: #131722; color: #d1d4dc; font-family: -apple-system, sans-serif; margin: 0; padding: 40px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1 { color: #ffffff; margin-bottom: 10px; }
+        .back-link { color: #2962ff; text-decoration: none; font-size: 14px; display: block; margin-bottom: 30px; }
+        table { width: 100%; border-collapse: collapse; background-color: #1e222d; border-radius: 8px; overflow: hidden; }
+        th { background-color: #2a2e39; color: #868993; font-weight: 600; text-align: left; padding: 16px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; user-select: none; }
+        td { padding: 16px; border-bottom: 1px solid #363a45; font-size: 15px; }
+        tr:hover { background-color: #2a2e39; }
+        .coin-symbol { color: #2962ff; font-weight: bold; text-decoration: none; }
+        .coin-symbol:hover { text-decoration: underline; }
+        .price { font-family: "Roboto Mono", monospace; color: #ffffff; }
+        .details { color: #868993; font-size: 13px; }
+        .warning-banner { background-color: #f23645; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; display: flex; align-items: center; }
+        .warning-icon { margin-right: 10px; font-size: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{% url 'strategy_list' %}" class="back-link">← 전략 리스트로 돌아가기</a>
+        <h1>검색 결과: {{ strategy.name }}</h1>
+
+        {% if rate_limit_warning %}
+        <div class="warning-banner">
+            <span class="warning-icon">⚠️</span>
+            업비트 API 호출 제한으로 인해 일부 코인이 검색에서 누락되었습니다. 잠시 후 다시 시도해주세요.
+        </div>
+        {% endif %}
+
+        <p style="color: #868993; margin-bottom: 30px;">조건을 만족하는 코인 목록입니다. 코인명을 클릭하면 업비트 차트로 이동합니다.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>코인명 (Symbol)</th>
+                    <th>현재가 (KRW)</th>
+                    <th>거래대금</th>
+                    <th>지표 정보</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for coin in results %}
+                <tr>
+                    <td>
+                        <a href="https://upbit.com/exchange?code=CRIX.UPBIT.{{ coin.symbol }}" target="_blank" class="coin-symbol">
+                            {{ coin.symbol }}
+                        </a>
+                    </td>
+                    <td class="price" data-value="{{ coin.price }}">{{ coin.price }}</td>
+                    <td class="price" data-value="{{ coin.volume }}">{{ coin.volume_display }}</td>
+                    <td class="details">{{ coin.details }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align: center; padding: 40px; color: #5d606b;">조건에 맞는 코인이 없습니다.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        document.querySelectorAll('th').forEach(headerCell => {
+            headerCell.addEventListener('click', () => {
+                const tableElement = headerCell.closest('table');
+                const tbody = tableElement.querySelector('tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+                if (rows.length === 1 && rows[0].querySelector('td').getAttribute('colspan')) return;
+
+                const headerIndex = Array.from(headerCell.parentElement.children).indexOf(headerCell);
+                const currentIsAscending = headerCell.classList.contains('th-sort-asc');
+
+                rows.sort((a, b) => {
+                    const aCell = a.children[headerIndex];
+                    const bCell = b.children[headerIndex];
+                    const aValue = aCell.dataset.value || aCell.textContent.trim();
+                    const bValue = bCell.dataset.value || bCell.textContent.trim();
+
+                    return currentIsAscending
+                        ? (isNaN(aValue) ? bValue.localeCompare(aValue) : bValue - aValue)
+                        : (isNaN(aValue) ? aValue.localeCompare(bValue) : aValue - bValue);
+                });
+
+                while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+                tbody.append(...rows);
+
+                headerCell.classList.toggle('th-sort-asc', !currentIsAscending);
+            });
+        });
+    </script>
+</body>
+</html>
