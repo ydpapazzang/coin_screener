@@ -2,13 +2,15 @@ import pyupbit
 import pandas as pd
 import time
 
-def get_ohlcv_with_retry(ticker, interval, count=200, retries=3, delay=0.2):
+def get_ohlcv_with_retry(ticker, interval, count=200, retries=3, delay=0.3):
     """API 호출 제한을 고려하여 재시도 로직이 포함된 OHLCV 조회"""
     for i in range(retries):
+        # 업비트 초당 호출 제한을 피하기 위한 최소한의 지연
+        time.sleep(0.1) 
         df = pyupbit.get_ohlcv(ticker, interval=interval, count=count)
         if df is not None:
             return df
-        time.sleep(delay * (i + 1))  # 실패 시 점진적으로 대기 시간 증가
+        time.sleep(delay * (i + 1))
     return None
 
 def calculate_rsi(ohlc: pd.DataFrame, period: int = 14):
@@ -22,15 +24,11 @@ def calculate_rsi(ohlc: pd.DataFrame, period: int = 14):
     RS = au / ad
     return pd.Series(100 - (100 / (1 + RS)), name="RSI")
 
-def check_strategy(ticker, conditions):
+def check_strategy(ticker, conditions, current_price=None):
     """
     특정 코인이 주어진 전략(조건 리스트)을 만족하는지 확인
     """
     try:
-        # 1. 필요한 데이터 프레임 가져오기 (가장 긴 timeframe 기준 최적화 필요하지만 여기선 단순화)
-        # 조건들 중 가장 긴 timeframe을 찾거나, 각각 호출해야 함. 
-        # 성능을 위해 여기서는 조건별로 필요한 데이터를 호출합니다.
-        
         data_cache = {} # timeframe별 데이터 캐싱
         details = [] # 지표 값 저장용 리스트
         last_price = None

@@ -149,9 +149,8 @@ def coin_search(request, strategy_id):
             pass
         return None
 
-    # 병렬 처리를 강화하고 인위적인 지연을 제거하여 속도를 향상시킵니다.
-    # 업비트 API의 초당 호출 제한(IP당 약 10회)을 고려하여 max_workers를 조정했습니다.
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+    # max_workers를 너무 높이면 초당 호출 제한에 걸릴 수 있으므로 5~10 사이 권장
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         future_to_ticker = {executor.submit(process_ticker, t): t for t in tickers}
         
         error_occurred = False
