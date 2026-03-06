@@ -8,7 +8,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "coinscreener/wsgi.py"
+      "dest": "coinscreener/coinscreener/wsgi.py"
     }
   ]
 }
