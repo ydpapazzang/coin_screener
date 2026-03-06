@@ -1,0 +1,14 @@
+{
+  "builds": [
+    {
+      "src": "coinscreener/wsgi.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "coinscreener/wsgi.py"
+    }
+  ]
+}

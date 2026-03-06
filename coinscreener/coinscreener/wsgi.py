@@ -14,3 +14,6 @@ from django.core.wsgi import get_wsgi_application
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'coinscreener.settings')
 
 application = get_wsgi_application()
+
+# 기존 코드 아래에 추가
+app = application
